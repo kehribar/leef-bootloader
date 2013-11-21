@@ -123,6 +123,12 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    if(endAddress > (32768 - 2048))
+    {
+        printf("[err]: Program size is too big!\n");
+	return 0;
+    }
+
     printf("[dbg]: Erasing the memory ...\n");
     serialport_writebyte(fd,'d');
     if (readACK(fd) > 0)
