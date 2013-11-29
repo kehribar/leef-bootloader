@@ -11,20 +11,43 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <avr/boot.h>
+#include <avr/wdt.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <util/delay.h>
 #include "./digital.h"
-#include "./elmChan_serial/suart.h"
-#include "./elmChan_serial/xitoa.h"
 
 void (*funcptr)(void) = 0x0000;
 
-/* SPM_PAGESIZE is 128 bytes */
+/* SPM_PAGESIZE is 64 bytes for Attiny84 */
 static uint8_t pageBuf[SPM_PAGESIZE];
 
-#define getByte() rcvr()
-#define send_char(x) xmit(x)
+#define CPU_CLOCK_FREQ   8000000UL 
+#define SAMPLES_PER_BIT  8 
+#define BAUD_RATE        115200 
+
+/* http://www.avrfreaks.net/index.php?name=PNphpBB2&file=viewtopic&p=921386&sid=da7c0ec9973a3245d52f5261b46b3f9c#921386 */
+void uart_init()
+{
+    /* Set samples per bit and UART baud */ 
+    LINBTR = (1 << LDISR) | SAMPLES_PER_BIT; 
+    LINBRR = ((CPU_CLOCK_FREQ / SAMPLES_PER_BIT) / BAUD_RATE) - 1; 
+
+    /* Configure LIN UART in UART mode */ 
+    LINCR  = (1 << LENA) | (1 << LCMD0) | (1 << LCMD1) | (1 << LCMD2); 
+}
+
+void send_char(uint8_t ch)
+{
+    while ((LINSIR & (1 << LBUSY))); 
+    
+    LINDAT = ch;
+
+    while ((LINSIR & (1 << LTXOK))); 
+}
+
+#define newMessage() (LINSIR & (1<<LRXOK))
+#define getByte() (LINDAT)
 
 static void boot_program_page(uint32_t page, uint8_t *buf)
 {
@@ -47,21 +70,23 @@ static void boot_program_page(uint32_t page, uint8_t *buf)
 
 int main(void) 
 {    
-    uint8_t t8;
     uint16_t i;
     uint8_t msg;
     uint32_t t32;
     uint8_t run = 1;
     uint32_t pageNum;
-    uint32_t counter = 0;
+    uint32_t counter = 0;  
 
-    pinMode(A,1,INPUT);
-    pinMode(A,0,OUTPUT);
-    digitalWrite(A,0,HIGH);
+    wdt_reset();
+    wdt_enable(WDTO_8S);  
+
+    pinMode(A,0,INPUT);
+    pinMode(A,1,OUTPUT);
 
     uint8_t x;
 
-    #if 0
+    uart_init();
+
     /* Wait until a message arrives or timeout */
     while((!newMessage())&&(run))
     {        
@@ -70,7 +95,6 @@ int main(void)
             run = 0;
         }        
     }
-    #endif
 
     /* Was it correct message? */
     if(getByte() != 'a')
@@ -81,11 +105,19 @@ int main(void)
     {
         /* Send ACK */
         send_char('Y');
-    }    
+    }        
 
     while(run)
-    {                
-        // while(!newMessage());
+    {    
+        /* kick the dog ... */
+        wdt_reset();            
+        
+        while(!newMessage())
+        {
+            /* kick the dog ... */
+            wdt_reset();
+        }
+        
         msg = getByte();
         
         switch(msg)
@@ -105,7 +137,7 @@ int main(void)
 
                 for(i=0;i<SPM_PAGESIZE;i++)
                 {
-                    // while(!newMessage());
+                    while(!newMessage());
                     pageBuf[i] = getByte();
                 }
 
@@ -117,20 +149,20 @@ int main(void)
                 /* Send ACK */
                 send_char('Y');
 
-                // while(!newMessage());
+                while(!newMessage());
                 pageNum = getByte();
 
-                // while(!newMessage());
+                while(!newMessage());
                 t32 = getByte();
                 t32 = t32 << 8;
                 pageNum += t32;
 
-                // while(!newMessage());
+                while(!newMessage());
                 t32 = getByte();
                 t32 = t32 << 16;
                 pageNum += t32;
 
-                // while(!newMessage());
+                while(!newMessage());
                 t32 = getByte();
                 t32 = t32 << 24;
                 pageNum += t32;
@@ -156,7 +188,10 @@ int main(void)
             }
             /* Go to user app ... */
             case 'x':
-            {                                    
+            {                   
+                MCUSR &= ~(1 << WDRF);
+                wdt_disable();                 
+                
                 funcptr();                 
                 break;
             }
@@ -164,6 +199,8 @@ int main(void)
     }
     
     /* Go to user app ... */
+    MCUSR &= ~(1 << WDRF);
+    wdt_disable();                 
     funcptr();
 
     return 0;

@@ -9,9 +9,9 @@ PROJECT = main
 
 ### Source files and search directory
 CSRC    = main.c 
-ASRC    = suart.S xitoa.S
-VPATH   =  ./elmChan_serial
-DEVICE  = attiny84
+ASRC    =
+VPATH   = 
+DEVICE  = attiny167
 F_OSC   = 8000000
 PORT 	= /dev/tty.usbserial-A900cbrd 
 AVRDUDE = avrdude -c usbtiny -p ${DEVICE} -U flash:w:$(PROJECT).hex -B 1

@@ -15,7 +15,6 @@
 uint8_t dataBuffer[65536];
 /*-----------------------------------------------------------------------------------------------*/
 #define PAGE_SIZE 64
-#define SERIAL_PATH "/dev/tty.usbserial-A800GWDQ"
 /*-----------------------------------------------------------------------------------------------*/
 static int parseIntelHex(char *hexfile, uint8_t* buffer, int *startAddr, int *endAddr);
 static int parseHex(FILE *file_pointer, int num_digits);
@@ -25,7 +24,7 @@ int connectDevice(char* path)
 {
     int fd = -1;    
 
-    fd = serialport_init(SERIAL_PATH,115200,'n');
+    fd = serialport_init(path,115200,'n');
 
     if(fd < 0)
     {
@@ -83,18 +82,18 @@ int main(int argc, char *argv[])
     int startAddress = 1;
     char* fileName = NULL;
 
-    if(argc == 1)
+    if(argc != 3)
     {
-        printf("[err]: What is the file name?\n");        
+        printf("> Usage: ./main {filename} {portname}\n");        
         return 0;
     }
-    else if(argc > 2)
+    else if(argc > 3)
     {
         printf("[err]: Unneccessary parameters!\n");
         return 0;
     }
 
-    fd = connectDevice(SERIAL_PATH);
+    fd = connectDevice(argv[2]);
 
     if(fd < 0)
     {
