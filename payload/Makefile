@@ -9,13 +9,15 @@ PROJECT = main
 
 ### Source files and search directory
 CSRC    = main.c 
-ASRC    = 
-VPATH   = 
-DEVICE  = atmega328p
-F_OSC   = 16000000
+ASRC    = suart.S xitoa.S
+VPATH   =  ./elmChan_serial
+DEVICE  = attiny84
+F_OSC   = 8000000
 PORT 	= /dev/tty.usbserial-A900cbrd 
 AVRDUDE = avrdude -c usbtiny -p ${DEVICE} -U flash:w:$(PROJECT).hex -B 1
 RESET   = avrdude -c usbtiny -p ${DEVICE}
+ 
+BOOTSTART = 0
 
 ###############################################################################
 #
@@ -27,7 +29,7 @@ RESET   = avrdude -c usbtiny -p ${DEVICE}
 LIBS	=
 LIBDIRS	=
 INCDIRS	=
-DEFS	= F_CPU=$(F_OSC)
+DEFS	= F_CPU=$(F_OSC) BOOTSTART=$(BOOTSTART)
 ADEFS	= F_CPU=$(F_OSC)
 
 ### Optimization level (0, 1, 2, 3, 4 or s)
@@ -83,6 +85,7 @@ ASFLAGS += $(addprefix -D,$(ADEFS)) -Wa,-gstabs,-g$(DEBUG)
 ALL_ASFLAGS = -mmcu=$(DEVICE) -I. -x assembler-with-cpp $(ASFLAGS) -fdata-sections -ffunction-sections
 
 # Linker flags
+CFLAGS	 += -Wl,--section-start=.text=$(BOOTSTART) 
 CFLAGS 	 += -Wl,-lm -Wl,--gc-sections,-Map,$(PROJECT).map
 
 # Default target.
@@ -177,6 +180,7 @@ console:
 	@echo
 	screen $(PORT) 19200
 
-relocate:
+read: 
 	@echo
-	cp obj/main.hex ../software/main.hex 
+	avrdude -p m328p -P usb -c usbtiny -U flash:r:flash.hex:r -B 1
+

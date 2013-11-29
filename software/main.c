@@ -14,8 +14,8 @@
 /*-----------------------------------------------------------------------------------------------*/
 uint8_t dataBuffer[65536];
 /*-----------------------------------------------------------------------------------------------*/
-#define PAGE_SIZE 128
-#define SERIAL_PATH "/dev/tty.usbserial-A900cbrd"
+#define PAGE_SIZE 64
+#define SERIAL_PATH "/dev/tty.usbserial-A800GWDQ"
 /*-----------------------------------------------------------------------------------------------*/
 static int parseIntelHex(char *hexfile, uint8_t* buffer, int *startAddr, int *endAddr);
 static int parseHex(FILE *file_pointer, int num_digits);
@@ -25,7 +25,7 @@ int connectDevice(char* path)
 {
     int fd = -1;    
 
-    fd = serialport_init(SERIAL_PATH,38400,'n');
+    fd = serialport_init(SERIAL_PATH,115200,'n');
 
     if(fd < 0)
     {
@@ -111,6 +111,16 @@ int main(int argc, char *argv[])
         return 0;
     }
 
+    if(sendPing(fd) > 0)
+    {
+        printf("[dbg]: Ping OK\n");
+    }
+    else
+    {
+        printf("[err]: Ping problem\n");
+        return 0;
+    }
+
     fileName = argv[1];
 
     memset(dataBuffer, 0xFF, sizeof(dataBuffer));
@@ -123,7 +133,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    if(endAddress > (32768 - 2048))
+    if(endAddress > (16384 - 1024))
     {
         printf("[err]: Program size is too big!\n");
 	return 0;

@@ -9,26 +9,16 @@ PROJECT = main
 
 ### Source files and search directory
 CSRC    = main.c 
-CSRC   += hal_hci.c hal_serial.c hal_timer.c hal_analog.c
-ASRC    = 
-VPATH   =  ./hal 
-DEVICE  = atmega328p
-F_OSC   = 16000000
+ASRC    = suart.S xitoa.S
+VPATH   =  ./elmChan_serial
+DEVICE  = attiny84
+F_OSC   = 8000000
 PORT 	= /dev/tty.usbserial-A900cbrd 
 AVRDUDE = avrdude -c usbtiny -p ${DEVICE} -U flash:w:$(PROJECT).hex -B 1
 RESET   = avrdude -c usbtiny -p ${DEVICE}
 
-# avrdude -c usbtiny -p m328p -U lfuse:w:0xff:m -U hfuse:w:0xde:m -U efuse:w:0x05:m
-# 32768 - 512  = 32256 => 0x7E00
-
-# avrdude -c usbtiny -p m328p -U lfuse:w:0xff:m -U hfuse:w:0xda:m -U efuse:w:0xfd:m
-# 32768 - 2048 = 30720 => 0x7800
-
-# WE ARE USING THE FOLLOWING SETTINGS
-# avrdude -c usbtiny -p m328p -U lfuse:w:0xff:m -U hfuse:w:0xd8:m -U efuse:w:0xfd:m
-# 32768 - 4096 = 30720 => 0x7000
-
-BOOTSTART = 0x7000
+# 8192 - 1024 
+BOOTSTART = 0x1C00
 
 ###############################################################################
 #
@@ -193,5 +183,5 @@ console:
 
 read: 
 	@echo
-	avrdude -p m328p -P usb -c usbtiny -U flash:r:flash.hex:r -B 1
+	avrdude -p t84 -P usb -c usbtiny -U flash:r:flash.hex:r -B 1
 

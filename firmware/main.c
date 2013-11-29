@@ -14,15 +14,17 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <util/delay.h>
-#include "./hal/hal.h"
+#include "./digital.h"
+#include "./elmChan_serial/suart.h"
+#include "./elmChan_serial/xitoa.h"
 
 void (*funcptr)(void) = 0x0000;
 
 /* SPM_PAGESIZE is 128 bytes */
 static uint8_t pageBuf[SPM_PAGESIZE];
 
-#define newMessage() (UCSR0A & (1<<RXC0))
-#define getByte() (UDR0)
+#define getByte() rcvr()
+#define send_char(x) xmit(x)
 
 static void boot_program_page(uint32_t page, uint8_t *buf)
 {
@@ -41,8 +43,6 @@ static void boot_program_page(uint32_t page, uint8_t *buf)
 
     boot_page_write(page);
     boot_spm_busy_wait();  
-
-    boot_rww_enable();
 }
 
 int main(void) 
@@ -55,10 +55,13 @@ int main(void)
     uint32_t pageNum;
     uint32_t counter = 0;
 
-    init_serial();        
-    pinMode(B,5,OUTPUT);
-    digitalWrite(B,5,HIGH);
+    pinMode(A,1,INPUT);
+    pinMode(A,0,OUTPUT);
+    digitalWrite(A,0,HIGH);
 
+    uint8_t x;
+
+    #if 0
     /* Wait until a message arrives or timeout */
     while((!newMessage())&&(run))
     {        
@@ -67,6 +70,7 @@ int main(void)
             run = 0;
         }        
     }
+    #endif
 
     /* Was it correct message? */
     if(getByte() != 'a')
@@ -80,8 +84,8 @@ int main(void)
     }    
 
     while(run)
-    {        
-        while(!newMessage());
+    {                
+        // while(!newMessage());
         msg = getByte();
         
         switch(msg)
@@ -101,7 +105,7 @@ int main(void)
 
                 for(i=0;i<SPM_PAGESIZE;i++)
                 {
-                    while(!newMessage());
+                    // while(!newMessage());
                     pageBuf[i] = getByte();
                 }
 
@@ -113,20 +117,20 @@ int main(void)
                 /* Send ACK */
                 send_char('Y');
 
-                while(!newMessage());
+                // while(!newMessage());
                 pageNum = getByte();
 
-                while(!newMessage());
+                // while(!newMessage());
                 t32 = getByte();
                 t32 = t32 << 8;
                 pageNum += t32;
 
-                while(!newMessage());
+                // while(!newMessage());
                 t32 = getByte();
                 t32 = t32 << 16;
                 pageNum += t32;
 
-                while(!newMessage());
+                // while(!newMessage());
                 t32 = getByte();
                 t32 = t32 << 24;
                 pageNum += t32;
@@ -152,16 +156,13 @@ int main(void)
             }
             /* Go to user app ... */
             case 'x':
-            {                    
-                digitalWrite(B,5,LOW);                    
+            {                                    
                 funcptr();                 
                 break;
             }
         }     
     }
     
-    digitalWrite(B,5,LOW);
-
     /* Go to user app ... */
     funcptr();
 
