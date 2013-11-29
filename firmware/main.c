@@ -20,7 +20,7 @@
 
 void (*funcptr)(void) = 0x0000;
 
-/* SPM_PAGESIZE is 128 bytes */
+/* SPM_PAGESIZE is 64 bytes for Attiny84 */
 static uint8_t pageBuf[SPM_PAGESIZE];
 
 #define getByte() rcvr()
